@@ -35,37 +35,31 @@ Digit_t Matrix[DISPLAY_SIZE];
 
 
 
-void MAX7219_SendWord( uint8_t Addr, uint8_t Data )
-{
-  uint16_t Cmd = MAX7219_BUILD_WORD( Data, Addr  );
-  
-  gpio_set_bit( GPIO1 , 1, 0 );
-  vTaskDelay(25 / portTICK_PERIOD_MS );
-  gpio_set_bit( GPIO1 , 0, 0 );
-  spi_write_word( Cmd );
-  gpio_set_bit( GPIO1 , 1, 0 );
 
-}
-
-void MAX7219_Write_DBG ( void )
+void MAX7219_Write( uint8_t* _data, uint8_t _length )
 {
-  for( uint8_t y = 0 ; y < 4 ; y++ )
+  gpio_set_bit( GPIO1, 1, 0 );
+  gpio_set_bit( GPIO1, 0, 0 ); 
+
+  for (uint8_t i = 0; i < _length; i++)
   {
-    for( uint8_t x = 0 ; x < 8 ; x ++ )
-    {
-        MAX7219_SendWord( Matrix[y].Addr, Matrix[x].Data );
-    }
-  }            
+    spi_write_byte( *_data++ );
+  }
+
+  gpio_set_bit( GPIO1, 1, 0 );
 }
 
 void MAX7219_ShutdownStart( void )
 {
+  uint8_t *pData, buffer[ 2 * DISPLAY_SIZE ];
+  pData = buffer;
+
   for (uint8_t i = 0; i < DISPLAY_SIZE; i++)
   {
-    Matrix[i].Addr = REG_SHUTDOWN;
-    Matrix[i].Data = 0;   
-  } 
-  MAX7219_Write_DBG();         
+    *pData++ = REG_SHUTDOWN;
+    *pData++ = 0;
+  }
+  MAX7219_Write( pData, ( 2 * DISPLAY_SIZE ) );
 }
 
 void MAX7219_ShutdownStop( void )
