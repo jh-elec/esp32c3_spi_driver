@@ -19,6 +19,7 @@
 *|**************************************************************/
 
 #include <stdint.h>
+#include <string.h>
 #include "spi.h"
 
 
@@ -166,7 +167,7 @@ void spi_set_clock_div( uint32_t _clockDiv )
 
 void spi_write_byte( uint8_t _data )  
 {
-  REG_WRITE( SPI_MS_DLEN_REG, 8 );
+  REG_WRITE( SPI_MS_DLEN_REG, 7 );
   REG_WRITE( SPI_Wn_REG(0), _data );
 
   REG_SET_BIT( SPI_CMD_REG, SPI_UPDATE_bm );
@@ -178,11 +179,25 @@ void spi_write_byte( uint8_t _data )
 
 void spi_write_bytes( uint8_t *_data, uint8_t _length )
 {
-  if( _length > 16 ) _length = 16;
+  uint32_t i;
 
-  REG_WRITE( SPI_MS_DLEN_REG, ( ( 8 * _length ) -1 ) );
+  if (_length > 64) 
+  {
+    _length = 64;
+  }
 
-  spi_write_buffer( (uint32_t*) _data, _length );
+  uint32_t words = (_length + 3) / 4;  //16 max
+  uint32_t wordsBuf[16] = {0};
+  uint8_t *bytesBuf = (uint8_t *)wordsBuf;
+
+  memcpy(bytesBuf, _data, _length);  //copy data to buffer
+
+  REG_WRITE( SPI_MS_DLEN_REG, ( 8 * _length ) -1 );
+
+  for (i = 0; i < words; i++) 
+  {
+    REG_WRITE( SPI_Wn_REG(i), wordsBuf[i] );
+  }
 
   REG_SET_BIT( SPI_CMD_REG, SPI_UPDATE_bm );
   while ( REG_READ( SPI_CMD_REG ) & SPI_UPDATE_bm );
@@ -209,9 +224,9 @@ void spi_transfer_bytes( uint8_t *_data, uint8_t *_out, uint8_t _length )
 {
   if( _length > 16 ) _length = 16;
 
-  REG_WRITE( SPI_MS_DLEN_REG, ( ( 8 * _length ) -1 ) );
+  REG_WRITE( SPI_MS_DLEN_REG, (  8 * _length ) -1 );
 
-  spi_write_buffer( (uint32_t*) _data, _length );
+  spi_write_buffer( _data, _length );
 
   REG_SET_BIT( SPI_CMD_REG, SPI_UPDATE_bm );
   while ( REG_READ( SPI_CMD_REG ) & SPI_UPDATE_bm );
@@ -227,7 +242,7 @@ void spi_transfer_bytes( uint8_t *_data, uint8_t *_out, uint8_t _length )
 
 void spi_write_word( uint16_t _data )
 {
-  REG_WRITE( SPI_MS_DLEN_REG, 16 );
+  REG_WRITE( SPI_MS_DLEN_REG, 15 );
   REG_WRITE( SPI_Wn_REG(0), _data );
 
   REG_SET_BIT( SPI_CMD_REG, SPI_UPDATE_bm );
@@ -241,12 +256,12 @@ void spi_write_words( uint16_t * _data, uint8_t _length )
 {
   if( _length > 16 ) _length = 16;  
 
-  REG_WRITE( SPI_MS_DLEN_REG,(  ( 16  * _length) ) );
-  spi_write_buffer( _data, _length );
+  REG_WRITE( SPI_MS_DLEN_REG,(  ( 16 * _length) -1 ) );
+  spi_write_buffer( (uint32_t*)_data, _length );
 
   REG_SET_BIT( SPI_CMD_REG, SPI_UPDATE_bm );
-  while ( REG_READ( SPI_CMD_REG ) & SPI_UPDATE_bm );
+  while ( REG_READ( SPI_CMD_REG ) & SPI_UPDATE_bm ){};
 
   REG_SET_BIT( SPI_CMD_REG, SPI_USR_bm );
-  while ( REG_READ( SPI_CMD_REG ) & SPI_USR_bm );     
+  while ( REG_READ( SPI_CMD_REG ) & SPI_USR_bm ){};     
 }

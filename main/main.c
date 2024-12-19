@@ -25,6 +25,9 @@
 #define MAX7219_GPIO_CLK_PIN              0
 #define DISPLAY_SIZE                      4
 
+
+#define _delay(_ms)                       vTaskDelay( _ms / portTICK_PERIOD_MS );
+
 typedef struct _D
 {
     uint8_t Addr;
@@ -34,146 +37,157 @@ typedef struct _D
 Digit_t Matrix[DISPLAY_SIZE];
 
 
-
-
-void MAX7219_Write( uint8_t* _data, uint8_t _length )
+void spi_soft_write( uint8_t _data )
 {
-  gpio_set_bit( GPIO1, 1, 0 );
-  gpio_set_bit( GPIO1, 0, 0 ); 
-
-  for (uint8_t i = 0; i < _length; i++)
+  gpio_set_bit( GPIO1, 0, 1 );
+  for (uint8_t i = 0; i < 8 ; i++)
   {
-    spi_write_byte( *_data++ );
-  }
+    if ( _data & 0x80 )
+    {
+      gpio_set_bit( GPIO2, 1, 0 );
+    }
+    else
+    {
+      gpio_set_bit( GPIO2, 0, 0 );
+    }
+    gpio_set_bit( GPIO0, 0, 0 );
+    _delay(1);
+    gpio_set_bit( GPIO0, 1, 0 );
 
+    _data <<= 1;
+  }
   gpio_set_bit( GPIO1, 1, 0 );
+  _delay(5);
 }
 
-void MAX7219_ShutdownStart( void )
+void max7219_write( uint8_t* _data, uint8_t _length )
 {
-  uint8_t *pData, buffer[ 2 * DISPLAY_SIZE ];
-  pData = buffer;
+  spi_write_bytes( _data, _length );
+}
+
+void max7219_shutdown_enable( void )
+{
+  uint8_t *pData, buffer[ DISPLAY_SIZE * 2 ];
+  pData = buffer; 
 
   for (uint8_t i = 0; i < DISPLAY_SIZE; i++)
   {
     *pData++ = REG_SHUTDOWN;
     *pData++ = 0;
-  }
-  MAX7219_Write( pData, ( 2 * DISPLAY_SIZE ) );
-}
-
-void MAX7219_ShutdownStop( void )
-{
-  for (uint8_t i = 0; i < DISPLAY_SIZE; i++)
-  {
-    Matrix[i].Addr = REG_SHUTDOWN;
-    Matrix[i].Data = 1;   
-  }
-  MAX7219_Write_DBG();                  
-}
-
-void MAX7219_DisplayTestStart( void )
-{
-  for (uint8_t i = 0; i < DISPLAY_SIZE; i++)
-  {
-    Matrix[i].Addr = REG_DISPLAY_TEST;
-    Matrix[i].Data = 1;   
-  }   
-  MAX7219_Write_DBG();               
-}
-
-void MAX7219_DisplayTestStop( void )
-{ 
-  for (uint8_t i = 0; i < DISPLAY_SIZE; i++)
-  {
-    Matrix[i].Addr = REG_DISPLAY_TEST;
-    Matrix[i].Data = 0;   
   } 
-  MAX7219_Write_DBG();              
+  max7219_write( buffer, DISPLAY_SIZE  * 2 );  
 }
 
-void MAX7219_SetBrightness( uint8_t brightness )
+void max7219_shutdown_disable( void )
 {
-  brightness &= 0x0f;                                 
+  uint8_t *pData, buffer[ DISPLAY_SIZE * 2 ];
+  pData = buffer; 
+
   for (uint8_t i = 0; i < DISPLAY_SIZE; i++)
   {
-    Matrix[i].Addr = REG_INTENSITY;
-    Matrix[i].Data = brightness;   
-  }  
-  MAX7219_Write_DBG(); 
+    *pData++ = REG_SHUTDOWN;
+    *pData++ = 1;
+  } 
+  max7219_write( buffer, DISPLAY_SIZE  * 2 );                   
 }
 
-void MAX7219_Clear( void )
+void max7219_display_test_enable( void )
 {
-  for (uint8_t y = 0; y < DISPLAY_SIZE; y++)
+  uint8_t *pData, buffer[ DISPLAY_SIZE * 2 ];
+  pData = buffer; 
+
+  for (uint8_t i = 0; i < DISPLAY_SIZE; i++)
   {
-    for ( uint8_t x = 1 ; x < 9 ; x++ )
-    {
-        Matrix[y].Addr = x;
-        Matrix[y].Data = 0; 
-    }      
-  }  
-  MAX7219_Write_DBG();   
+    *pData++ = REG_DISPLAY_TEST;
+    *pData++ = 1;
+  } 
+  max7219_write( buffer, DISPLAY_SIZE  * 2 );               
 }
 
-void MAX7219_Screensaver( void )
-{
-  uint8_t cnt = 1;
+void max7219_display_test_disable( void )
+{ 
+  uint8_t *pData, buffer[ DISPLAY_SIZE * 2 ];
+  pData = buffer; 
 
-  while( cnt < 8 )
+  for (uint8_t i = 0; i < DISPLAY_SIZE; i++)
   {
-    for ( uint8_t x = 0 ; x < 31 ; x++ )
-    {
-      Matrix[3-((x / 8) % 4)].Addr = cnt;
-      Matrix[3-((x / 8) % 4)].Data = 1 << (x % 8);
-      MAX7219_Write_DBG();
-      vTaskDelay((30 - x) / portTICK_PERIOD_MS);
-      Matrix[3-((x / 8) % 4)].Data = 0;
-      MAX7219_Write_DBG();
-    }
-    cnt++;
-
-    for ( uint8_t x = 0 ; x < 31 ; x++ )
-    {
-      Matrix[3-((31-x / 8) % 4)].Addr = cnt;
-      Matrix[3-((31-x / 8) % 4)].Data = 1 <<((31-x) % 8);
-      MAX7219_Write_DBG();
-      vTaskDelay((30 - x)/portTICK_PERIOD_MS);
-      Matrix[3-((31-x / 8) % 4)].Data = 0;
-      MAX7219_Write_DBG();  
-    }
-    cnt++;  
-  }
+    *pData++ = REG_DISPLAY_TEST;
+    *pData++ = 0;
+  } 
+  max7219_write( buffer, DISPLAY_SIZE  * 2 );            
 }
 
-void MAX7219_SetPixel( uint16_t x )
+void max7219_brightness( uint8_t brightness )
 {
-    MAX7219_Clear();
+  brightness &= 0x0f; 
+
+  uint8_t *pData, buffer[ DISPLAY_SIZE * 2 ];
+  pData = buffer; 
+
+  for (uint8_t i = 0; i < DISPLAY_SIZE; i++)
+  {
+    *pData++ = REG_INTENSITY;
+    *pData++ = brightness;
+  } 
+  max7219_write( buffer, DISPLAY_SIZE  * 2 );   
+}
+
+void max7219_set_pixel( uint16_t x )
+{
     Matrix[3-((x / 8) % 4)].Addr = (x / 32) + 1;
     Matrix[3-((x / 8) % 4)].Data = 1 << (x % 8);
-    MAX7219_Write_DBG();
 }
+
+void max7219_set_scan_limit( uint8_t _limit )
+{                              
+  uint8_t *pData, buffer[ DISPLAY_SIZE * 2 ];
+  pData = buffer; 
+
+  for (uint8_t i = 0; i < DISPLAY_SIZE; i++)
+  {
+    *pData++ = REG_SCAN_LIMIT;
+    *pData++ = _limit;
+  } 
+  spi_write_bytes( buffer, (DISPLAY_SIZE * 2) );  
+}
+
+void max7219_set_decode( uint8_t _decode )
+{                              
+  uint8_t *pData, buffer[ DISPLAY_SIZE * 2 ];
+  pData = buffer; 
+
+  for (uint8_t i = 0; i < DISPLAY_SIZE; i++)
+  {
+    *pData++ = REG_DECODE;
+    *pData++ = _decode;
+  } 
+  spi_write_bytes( buffer, (DISPLAY_SIZE * 2) );  
+}
+
+
+
+
 
 void app_main(void)
 {
     gpio_pin_map_to_peripheral(GPIO6, 64, 0 ); // miso
     gpio_pin_map_to_peripheral(GPIO2, 65, 0 ); // mosi
-    //gpio_pin_map_to_peripheral(GPIO1, 68, 0 ); // cs
+    gpio_pin_map_to_peripheral(GPIO1, 68, 0 ); // cs
     gpio_pin_map_to_peripheral(GPIO0, 63, 0 ); // clk
 
     spi_config_pins( GPIO2, GPIO6, GPIO0, GPIO1, 1);
     spi_start_bus( 1000000, SPI_DATA_MODE_0, SPI_BIT_ORDER_MSB );
 
-    MAX7219_SendWord(REG_SCAN_LIMIT, 7);                  
-    MAX7219_SendWord(REG_DECODE, 0x00);                    
-    MAX7219_ShutdownStop();                             
-    MAX7219_DisplayTestStop();                          
-    MAX7219_Clear();                                    
-    MAX7219_SetBrightness(0x01);     
+     
+    max7219_set_scan_limit(7);
+    max7219_set_decode(0x00);                                          
+    max7219_display_test_disable();                                                         
+    max7219_brightness( 0x01 ); 
 
     while (1)
     {    
-        MAX7219_Clear();
+        uint8_t buff[] = {1,2,3,4,5,6,7,8,9};
+        spi_write_bytes( buff, 9 );
     }
 
 }
