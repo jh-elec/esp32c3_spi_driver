@@ -120,6 +120,14 @@
 #define SPI_WR_BIT_ORDER_bm					BIT(SPI_WR_BIT_ORDER_bp)
 
 
+#define SPI_DMA_INT_RAW_REG					SPI2_REG(0x3C)
+#define SPI_TRANS_DONE_INT_RAW_bp			12
+#define SPI_TRANS_DONE_INT_RAW_bm			BIT(SPI_TRANS_DONE_INT_RAW_bp)
+
+#define SPI_DMA_INT_CLR_REG					SPI2_REG(0x38)
+#define SPI_TRANS_DONE_INT_CLR_bp			12
+#define SPI_TRANS_DONE_INT_CLR_bm			BIT(SPI_TRANS_DONE_INT_CLR_bp)
+
 /* versions register */
 #define SPI_DATE_REG                        SPI2_REG(0xF0)
 
@@ -200,6 +208,10 @@ void spi_transfer_bytes( uint8_t *_data, uint8_t *_out, uint8_t _length );
 void spi_write_word( uint16_t _data );
 
 void spi_write_words( uint16_t * _data, uint8_t _length );
+
+void spi_write_dword( uint32_t _data );
+
+void spi_poll_trans_done_int();
 
 /*****************************************************************/
 /*!<-- Funktions Prototypen // Ende <--*/

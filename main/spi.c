@@ -265,3 +265,22 @@ void spi_write_words( uint16_t * _data, uint8_t _length )
   REG_SET_BIT( SPI_CMD_REG, SPI_USR_bm );
   while ( REG_READ( SPI_CMD_REG ) & SPI_USR_bm ){};     
 }
+
+void spi_write_dword( uint32_t _data )
+{
+  REG_WRITE( SPI_MS_DLEN_REG, 32 -1 );
+  REG_WRITE( SPI_Wn_REG(0), _data );
+
+  REG_SET_BIT( SPI_CMD_REG, SPI_UPDATE_bm );
+  while ( REG_READ( SPI_CMD_REG ) & SPI_UPDATE_bm ){};
+
+  REG_SET_BIT( SPI_CMD_REG, SPI_USR_bm );
+  while ( REG_READ( SPI_CMD_REG ) & SPI_USR_bm ){};    
+
+  spi_poll_trans_done_int();
+}
+
+void spi_poll_trans_done_int()
+{
+  while( ! ( REG_READ( SPI_DMA_INT_RAW_REG )  & SPI_TRANS_DONE_INT_RAW_bm ));
+}
