@@ -57,6 +57,8 @@
 #define SPI_USR_MOSI_HIGHPART_bm            BIT(SPI_USR_MOSI_HIGHPART_bp)
 #define SPI_CK_OUT_EDGE_bp					9
 #define SPI_CK_OUT_EDGE_bm					BIT(SPI_CK_OUT_EDGE_bp)
+#define SPI_USR_CONF_NXT_bp					15
+#define SPI_USR_CONF_NXT_bm					BIT(SPI_USR_CONF_NXT_bp)
 
 #define SPI_USER1_REG                       SPI2_REG(0x14)
 
@@ -119,6 +121,14 @@
 #define SPI_WR_BIT_ORDER_bp					26
 #define SPI_WR_BIT_ORDER_bm					BIT(SPI_WR_BIT_ORDER_bp)
 
+
+#define SPI_DMA_INT_RAW_REG					SPI2_REG(0x3C)
+#define SPI_TRANS_DONE_INT_RAW_bp			12
+#define SPI_TRANS_DONE_INT_RAW_bm			BIT(SPI_TRANS_DONE_INT_RAW_bp)
+
+#define SPI_DMA_INT_CLR_REG					SPI2_REG(0x38)
+#define SPI_TRANS_DONE_INT_CLR_bp			12
+#define SPI_TRANS_DONE_INT_CLR_bm			BIT(SPI_TRANS_DONE_INT_CLR_bp)
 
 /* versions register */
 #define SPI_DATE_REG                        SPI2_REG(0xF0)
@@ -200,6 +210,10 @@ void spi_transfer_bytes( uint8_t *_data, uint8_t *_out, uint8_t _length );
 void spi_write_word( uint16_t _data );
 
 void spi_write_words( uint16_t * _data, uint8_t _length );
+
+void spi_write_dword( uint32_t _data );
+
+void spi_poll_trans_done_int();
 
 /*****************************************************************/
 /*!<-- Funktions Prototypen // Ende <--*/

@@ -22,6 +22,20 @@
 #include <string.h>
 #include "spi.h"
 
+static inline uint16_t swap_word( uint16_t _data )
+{
+  return ( _data >> 8 | _data << 8 );
+}
+
+static inline uint32_t swap_dword(uint32_t _data )
+  {
+      uint32_t swapped = (_data >> 24) & 0xff;
+      swapped |= (_data >> 8) & 0xff00;
+      swapped |= (_data << 8) & 0xff0000;
+      swapped |= (_data << 24) & 0xff000000u;
+
+      return swapped;
+  }
 
 void spi_init_bus() 
 {
@@ -35,6 +49,8 @@ void spi_init_bus()
   REG_SET_BIT( SPI_DMA_CONF_REG, SPI_RX_AFIFO_RST_bm );
   REG_SET_BIT( SPI_DMA_CONF_REG, SPI_BUF_AFIFO_RST_bm );
   REG_WRITE( SPI_CLOCK_REG, 0 );
+
+  //REG_SET_BIT( SPI_USER_REG,  SPI_USR_CONF_NXT_bm );
 }
 
 void spi_start_bus( uint32_t _clockDiv, const dataMode_t _dataMode, const bitOrder_t _bitOrder )
@@ -179,8 +195,6 @@ void spi_write_byte( uint8_t _data )
 
 void spi_write_bytes( uint8_t *_data, uint8_t _length )
 {
-  uint32_t i;
-
   if (_length > 64) 
   {
     _length = 64;
@@ -190,20 +204,25 @@ void spi_write_bytes( uint8_t *_data, uint8_t _length )
   uint32_t wordsBuf[16] = {0};
   uint8_t *bytesBuf = (uint8_t *)wordsBuf;
 
-  memcpy(bytesBuf, _data, _length);  //copy data to buffer
-
+  for (uint8_t i = 0; i < _length; i++)
+  {
+    *bytesBuf++ = *_data++;
+  }
+  
   REG_WRITE( SPI_MS_DLEN_REG, ( 8 * _length ) -1 );
 
-  for (i = 0; i < words; i++) 
+  for (uint8_t i = 0; i < words; i++)
   {
-    REG_WRITE( SPI_Wn_REG(i), wordsBuf[i] );
+    REG_WRITE( SPI_Wn_REG( i ), wordsBuf[i] );
   }
-
+  
   REG_SET_BIT( SPI_CMD_REG, SPI_UPDATE_bm );
   while ( REG_READ( SPI_CMD_REG ) & SPI_UPDATE_bm );
 
   REG_SET_BIT( SPI_CMD_REG, SPI_USR_bm );
   while ( REG_READ( SPI_CMD_REG ) & SPI_USR_bm );  
+
+  spi_poll_trans_done_int();
 }
 
 uint8_t spi_transfer_byte( uint8_t _data, uint8_t _length )
@@ -226,7 +245,7 @@ void spi_transfer_bytes( uint8_t *_data, uint8_t *_out, uint8_t _length )
 
   REG_WRITE( SPI_MS_DLEN_REG, (  8 * _length ) -1 );
 
-  spi_write_buffer( _data, _length );
+  spi_write_buffer( (uint32_t*) _data, _length );
 
   REG_SET_BIT( SPI_CMD_REG, SPI_UPDATE_bm );
   while ( REG_READ( SPI_CMD_REG ) & SPI_UPDATE_bm );
@@ -243,7 +262,7 @@ void spi_transfer_bytes( uint8_t *_data, uint8_t *_out, uint8_t _length )
 void spi_write_word( uint16_t _data )
 {
   REG_WRITE( SPI_MS_DLEN_REG, 15 );
-  REG_WRITE( SPI_Wn_REG(0), _data );
+  REG_WRITE( SPI_Wn_REG(0), swap_word( _data ) );
 
   REG_SET_BIT( SPI_CMD_REG, SPI_UPDATE_bm );
   while ( REG_READ( SPI_CMD_REG ) & SPI_UPDATE_bm );
@@ -257,11 +276,34 @@ void spi_write_words( uint16_t * _data, uint8_t _length )
   if( _length > 16 ) _length = 16;  
 
   REG_WRITE( SPI_MS_DLEN_REG,(  ( 16 * _length) -1 ) );
-  spi_write_buffer( (uint32_t*)_data, _length );
-
+  
+  for (uint8_t i = 0; i < _length; i++)
+  {
+    REG_WRITE( SPI_Wn_REG( i ), swap_word( *_data++ ) );
+  }
+  
   REG_SET_BIT( SPI_CMD_REG, SPI_UPDATE_bm );
   while ( REG_READ( SPI_CMD_REG ) & SPI_UPDATE_bm ){};
 
   REG_SET_BIT( SPI_CMD_REG, SPI_USR_bm );
   while ( REG_READ( SPI_CMD_REG ) & SPI_USR_bm ){};     
+}
+
+void spi_write_dword( uint32_t _data )
+{
+  REG_WRITE( SPI_MS_DLEN_REG, 32 -1 );
+  REG_WRITE( SPI_Wn_REG(0), _data );
+
+  REG_SET_BIT( SPI_CMD_REG, SPI_UPDATE_bm );
+  while ( REG_READ( SPI_CMD_REG ) & SPI_UPDATE_bm ){};
+
+  REG_SET_BIT( SPI_CMD_REG, SPI_USR_bm );
+  while ( REG_READ( SPI_CMD_REG ) & SPI_USR_bm ){};    
+
+  spi_poll_trans_done_int();
+}
+
+void spi_poll_trans_done_int()
+{
+  while( ! ( REG_READ( SPI_DMA_INT_RAW_REG )  & SPI_TRANS_DONE_INT_RAW_bm ));
 }

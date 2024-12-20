@@ -186,8 +186,11 @@ void app_main(void)
 
     while (1)
     {    
-        uint8_t buff[] = {1,2,3,4,5,6,7,8,9};
-        spi_write_bytes( buff, 9 );
+        //uint8_t buff[] = {1,2,3,4};
+        //spi_write_bytes( buff, 4 );
+
+        uint8_t buff[] = {1,2,3,4,5};
+        spi_write_bytes( buff, 5 );
     }
 
 }
