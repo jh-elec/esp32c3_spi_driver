@@ -12,7 +12,12 @@
         "array": "c",
         "string": "c",
         "string_view": "c",
-        "span": "c"
+        "span": "c",
+        "bitset": "c",
+        "algorithm": "c",
+        "format": "c",
+        "stdio.h": "c",
+        "stdint.h": "c"
     },
     "files.readonlyInclude": {
         "{**/.c4z/.extsrcs/*.PROTSYM.cbl,**/.c4z/.extsrcs/*.PROTSYM.listing}": true

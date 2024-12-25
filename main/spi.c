@@ -22,20 +22,22 @@
 #include <string.h>
 #include "spi.h"
 
+
+
 static inline uint16_t swap_word( uint16_t _data )
 {
   return ( _data >> 8 | _data << 8 );
 }
 
 static inline uint32_t swap_dword(uint32_t _data )
-  {
-      uint32_t swapped = (_data >> 24) & 0xff;
-      swapped |= (_data >> 8) & 0xff00;
-      swapped |= (_data << 8) & 0xff0000;
-      swapped |= (_data << 24) & 0xff000000u;
+{
+  return (((_data & 0x000000ffU) << 24) |
+          ((_data & 0x0000ff00U) <<  8) |
+          ((_data & 0x00ff0000U) >>  8) |
+          ((_data & 0xff000000U) >> 24));
+}
 
-      return swapped;
-  }
+
 
 void spi_init_bus() 
 {
@@ -55,12 +57,10 @@ void spi_init_bus()
 
 void spi_start_bus( uint32_t _clockDiv, const dataMode_t _dataMode, const bitOrder_t _bitOrder )
 {
-  bBusIsStart = false;
-
   spi2_enable();
   spi_init_bus();
 
-  REG_WRITE( SPI_CLK_GATE_REG, ( SPI_CLK_EN_bm | SPI_MST_CLK_ACTIVE_bm ) );
+  REG_WRITE( SPI_CLK_GATE_REG, ( SPI_CLK_EN_bm | SPI_MST_CLK_ACTIVE_bm | SPI_MST_CLK_SEL_bm ) );
   REG_SET_BIT( SPI_USER_REG, ( SPI_USR_MISO_bm | SPI_USR_MOSI_bm | SPI_DOUTDIN_bm ) );
 
   for ( uint32_t i =  0 ; i < 16 ; i++ )
@@ -71,20 +71,6 @@ void spi_start_bus( uint32_t _clockDiv, const dataMode_t _dataMode, const bitOrd
   spi_set_data_mode( _dataMode );
   spi_set_bit_order( _bitOrder );
   spi_set_clock_div( _clockDiv );
-
-  bBusIsStart = true;
-}
-
-uint8_t spi_config_pins( const gpio_t _mosi, const gpio_t _miso, const gpio_t _clk, const gpio_t _ss, uint8_t _func )
-{
-  if ( bBusIsStart == true )return 1; // bus wurde schon gestartet
-
-  gpio_set_io_mux( _mosi, _func );
-  gpio_set_io_mux( _miso, _func );
-  gpio_set_io_mux( _clk, _func );
-  gpio_set_io_mux( _ss, _func );
-
-  return 0;
 }
 
 void spi2_enable()
@@ -206,14 +192,14 @@ void spi_write_bytes( uint8_t *_data, uint8_t _length )
 
   for (uint8_t i = 0; i < _length; i++)
   {
-    *bytesBuf++ = *_data++;
+    bytesBuf[i] = _data[i];
   }
-  
+
   REG_WRITE( SPI_MS_DLEN_REG, ( 8 * _length ) -1 );
 
   for (uint8_t i = 0; i < words; i++)
   {
-    REG_WRITE( SPI_Wn_REG( i ), wordsBuf[i] );
+    REG_WRITE( SPI_Wn_REG( i ), wordsBuf[i]);
   }
   
   REG_SET_BIT( SPI_CMD_REG, SPI_UPDATE_bm );
@@ -265,7 +251,6 @@ void spi_write_word( uint16_t _data )
   REG_WRITE( SPI_Wn_REG(0), swap_word( _data ) );
 
   REG_SET_BIT( SPI_CMD_REG, SPI_UPDATE_bm );
-  while ( REG_READ( SPI_CMD_REG ) & SPI_UPDATE_bm );
 
   REG_SET_BIT( SPI_CMD_REG, SPI_USR_bm );
   while ( REG_READ( SPI_CMD_REG ) & SPI_USR_bm );   
@@ -279,11 +264,10 @@ void spi_write_words( uint16_t * _data, uint8_t _length )
   
   for (uint8_t i = 0; i < _length; i++)
   {
-    REG_WRITE( SPI_Wn_REG( i ), swap_word( *_data++ ) );
+    REG_WRITE( SPI_Wn_REG( i ),  swap_word( *_data++ ) );
   }
   
   REG_SET_BIT( SPI_CMD_REG, SPI_UPDATE_bm );
-  while ( REG_READ( SPI_CMD_REG ) & SPI_UPDATE_bm ){};
 
   REG_SET_BIT( SPI_CMD_REG, SPI_USR_bm );
   while ( REG_READ( SPI_CMD_REG ) & SPI_USR_bm ){};     
@@ -295,7 +279,6 @@ void spi_write_dword( uint32_t _data )
   REG_WRITE( SPI_Wn_REG(0), _data );
 
   REG_SET_BIT( SPI_CMD_REG, SPI_UPDATE_bm );
-  while ( REG_READ( SPI_CMD_REG ) & SPI_UPDATE_bm ){};
 
   REG_SET_BIT( SPI_CMD_REG, SPI_USR_bm );
   while ( REG_READ( SPI_CMD_REG ) & SPI_USR_bm ){};    
@@ -306,4 +289,9 @@ void spi_write_dword( uint32_t _data )
 void spi_poll_trans_done_int()
 {
   while( ! ( REG_READ( SPI_DMA_INT_RAW_REG )  & SPI_TRANS_DONE_INT_RAW_bm ));
+}
+
+void spi_trans_done_clear_int()
+{
+  REG_SET_BIT( SPI_DMA_INT_CLR_REG, SPI_TRANS_DONE_INT_CLR_bm );
 }

@@ -181,8 +181,6 @@ void spi_init_bus();
 
 void spi_start_bus( uint32_t _clockDiv, const dataMode_t _dataMode, const bitOrder_t _bitOrder );
 
-uint8_t spi_config_pins( const gpio_t _mosi, const gpio_t _miso, const gpio_t _clk, const gpio_t _ss, uint8_t _func );
-
 void spi2_enable();
 
 uint8_t spi_write_buffer( uint32_t *_data, uint8_t _length );
@@ -214,6 +212,8 @@ void spi_write_words( uint16_t * _data, uint8_t _length );
 void spi_write_dword( uint32_t _data );
 
 void spi_poll_trans_done_int();
+
+void spi_trans_done_clear_int();
 
 /*****************************************************************/
 /*!<-- Funktions Prototypen // Ende <--*/

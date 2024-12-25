@@ -44,6 +44,14 @@
 #define GPIO_FUNCx_OEN_INV_SEL_bp           10
 #define GPIO_FUNCx_OEN_INV_SEL_bm           BIT(GPIO_FUNCx_OEN_INV_SEL_bp) 
 
+#define GPIO_PINn_REG(n)					GPIO_REG((0x0074 + (4*n)))
+#define GPIO_PINn_PAD_DRIVER_bp				2
+#define GPIO_PINn_PAD_DRIVER_bm				BIT(GPIO_PINn_PAD_DRIVER_bp)
+
+#define GPIO_FUNCx_IN_SEL_CFG_REG(n)		GPIO_REG((0x0554 + (4*n)))
+#define GPIO_SIGx_IN_SEL_bp					6
+#define GPIO_SIGx_IN_SEL_bm					BIT(GPIO_SIGx_IN_SEL_bp)
+
 #define GPIO_BT_SELECT_REG                  GPIO_REG(0x00)
 #define GPIO_OUT_REG                        GPIO_REG(0x04)
 #define GPIO_OUT_W1TS_REG                   GPIO_REG(0x08)
@@ -60,6 +68,18 @@
 #define GPIO_STATUS_NEXT_REG                GPIO_REG(0x4C) 
  
 #define IO_MUX_GPIOn_REG(n)                 IO_MUX_REG((0x04 + (4*n)))
+#define IO_MUX_GPIOn_MCU_IE_bp				4
+#define IO_MUX_GPIOn_MCU_IE_bm				BIT(IO_MUX_GPIOn_MCU_IE_bp)
+#define IO_MUX_GPIOn_MCU_SEL_bp				12
+#define IO_MUX_GPIOn_MCU_SEL_bm				BIT(IO_MUX_GPIOn_MCU_SEL_bp)
+#define IO_MUX_GPIOn_FUN_IE_bp				9
+#define IO_MUX_GPIOn_FUN_IE_bm				BIT(IO_MUX_GPIOn_FUN_IE_bp)
+#define IO_MUX_GPIOn_FUN_WPD_bp				7
+#define IO_MUX_GPIOn_FUN_WPD_bm				BIT(IO_MUX_GPIOn_FUN_WPD_bp)
+#define IO_MUX_GPIOn_FUN_WPU_bp				8
+#define IO_MUX_GPIOn_FUN_WPU_bm				BIT(IO_MUX_GPIOn_FUN_WPU_bp)
+#define IO_MUX_GPIOn_MCU_OE_bp				1
+#define IO_MUX_GPIOn_MCU_OE_bm				BIT(IO_MUX_GPIOn_MCU_OE_bp)
 
 #define REG_WRITE(_r, _b)  		(*(volatile uint32_t*)(_r)) = (_b)      
 #define REG_READ(_r)  			(*(volatile uint32_t*)(_r))      
@@ -78,6 +98,12 @@ typedef enum GPIO_INV_SIGNAL_e
   GPIO_INV_SIGNAL_DISABLE,
   GPIO_INV_SIGNAL_ENABLE
 }GPIO_INV_SIGNAL_t;
+
+typedef enum GPIO_IO_e
+{
+	GPIO_IO_OUTPUT,
+	GPIO_IO_INPUT
+}GPIO_IO_t;
 
 typedef enum GPIOn_e
 {
@@ -125,7 +151,7 @@ void gpio_pin_map_to_peripheral( const gpio_t _pin, uint8_t _periphSignal, const
 *	_pin: gpiox
 *	_func: please see datasheet (io mux function)
 */
-void gpio_set_io_mux(const gpio_t _pin, uint8_t _func );
+void gpio_set_io_mux(const gpio_t _pin, const uint8_t _func, const GPIO_IO_t _io);
 
 /* configure io mux 
 *	_pin: gpiox
@@ -133,8 +159,14 @@ void gpio_set_io_mux(const gpio_t _pin, uint8_t _func );
 */
 void gpio_set_bit( const gpio_t _pin, const uint8_t _level, uint8_t _inv );
 
+void gpio_enable_output( const gpio_t _pin );
+
 /*****************************************************************/
 /*!<-- Funktions Prototypen // Ende <--*/
+
+
+#define DEBUG_LED_ON	gpio_set_bit( GPIO8, 0, 0 )
+#define DEBUG_LED_OFF	gpio_set_bit( GPIO8, 1, 0 )
 
 
 // end of file

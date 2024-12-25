@@ -32,15 +32,27 @@ void gpio_pin_map_to_peripheral( const gpio_t _pin, uint8_t _periphSignal, const
     REG_WRITE( GPIO_FUNCx_OUT_SEL_CNFG_REG( _pin ), ( _inv << 8 ) | ( periphSignal ));
 }
 
-void gpio_set_io_mux(const gpio_t _pin, uint8_t _func )
+void gpio_set_io_mux(const gpio_t _pin, const uint8_t _func, const GPIO_IO_t _io )
 {
-  REG_SET_BIT( IO_MUX_GPIOn_REG( _pin ), ( _func << 12 ) );  
+  REG_SET_BIT( IO_MUX_GPIOn_REG( _pin ), ( _func << IO_MUX_GPIOn_MCU_SEL_bp ) ); 
+  REG_CLR_BIT( GPIO_FUNCx_IN_SEL_CFG_REG( _pin ), GPIO_SIGx_IN_SEL_bm );
+
+  switch ( _io )
+  {
+    case GPIO_IO_OUTPUT:
+      REG_CLR_BIT( IO_MUX_GPIOn_REG( _pin ), ( IO_MUX_GPIOn_FUN_IE_bm | IO_MUX_GPIOn_FUN_WPU_bm ) ); 
+    break;
+    case GPIO_IO_INPUT:
+      REG_SET_BIT( IO_MUX_GPIOn_REG( _pin ), IO_MUX_GPIOn_FUN_IE_bm ); 
+    break; 
+  }
 }
 
 void gpio_set_bit( const gpio_t _pin, const uint8_t _level, uint8_t _inv )
 {
   REG_SET_BIT(GPIO_ENABLE_REG, 1 << _pin );
-  
+  REG_SET_BIT( GPIO_FUNCx_OUT_SEL_CNFG_REG( _pin ) , 0x80 | GPIO_FUNCx_OEN_SEL_bm );
+
   switch ( _inv )
   {
     case 0:
@@ -50,9 +62,6 @@ void gpio_set_bit( const gpio_t _pin, const uint8_t _level, uint8_t _inv )
     case 1:
       REG_SET_BIT( GPIO_FUNCx_OUT_SEL_CNFG_REG( _pin ),  ( _inv << GPIO_FUNCx_OUT_INV_SEL_bp ) );
     break; 
-
-    default:
-    break;
   }
 
   switch ( _level )
@@ -65,4 +74,9 @@ void gpio_set_bit( const gpio_t _pin, const uint8_t _level, uint8_t _inv )
       REG_SET_BIT( GPIO_OUT_REG, 1 << _pin );
     break;
   }
+}
+
+void gpio_enable_output( const gpio_t _pin )
+{
+  REG_WRITE( GPIO_ENABLE_REG, 1 << _pin );
 }
