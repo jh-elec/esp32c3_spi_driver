@@ -189,8 +189,14 @@ void app_main(void)
         //uint8_t buff[] = {1,2,3,4};
         //spi_write_bytes( buff, 4 );
 
-        uint8_t buff[] = {1,2,3,4,5};
-        spi_write_bytes( buff, 5 );
+        //uint8_t buff[] = {1,2,3,4};
+        //spi_write_bytes( buff, 4 );
+
+        for (uint8_t i = 0; i < 10; i++)
+        {
+          spi_write_byte(i);
+        }
+        
     }
 
 }
