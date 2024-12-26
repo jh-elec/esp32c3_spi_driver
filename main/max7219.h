@@ -40,10 +40,10 @@
 #define INTENSITY_MIN           0x00 // minimum display intensity
 #define INTENSITY_MAX           0x0f // maximum display intensity
 
-  #define GPIO_CLK              GPIO0
-  #define GPIO_CS               GPIO1
-  #define GPIO_MOSI             GPIO2
-  #define GPIO_MISO             GPIO3              
+#define GPIO_CLK                GPIO0
+#define GPIO_CS                 GPIO1
+#define GPIO_MOSI               GPIO2
+#define GPIO_MISO               GPIO3              
 /*****************************************************************/
 /*!<-- Defines // Ende <--*/
 

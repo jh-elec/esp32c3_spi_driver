@@ -18,7 +18,7 @@
 *|**************************************************************/
 
 #include "max7219.h"
-
+#include "spi.h"
 
 /*!<-- Globale Variablen <--*/
 /*****************************************************************/
@@ -40,15 +40,19 @@
 */
 void max7219_write( uint8_t* _data, uint8_t _length )
 {
-  gpio_set_bit( GPIO_CS, 1, 0 );
-  gpio_set_bit( GPIO_CS, 0, 0 ); 
+  #ifdef SPI_USE_SW_CS0
+    gpio_set_extendet( GPIO_CS, 1, 0 );
+    gpio_set_extendet( GPIO_CS, 0, 0 );
+  #endif
 
   for (size_t i = 0; i < _length; i++)
   {
     spi_write_byte( *_data++ );
   }
 
-  gpio_set_bit( GPIO_CS, 1, 0 );
+  #ifdef SPI_USE_SW_CS0
+    gpio_set_extendet( GPIO_CS, 1, 0 );
+  #endif
 }
 
 uint8_t* fill_n_matrix_ram ( uint8_t _digit, uint8_t* _ram, uint8_t _addr, uint8_t _data )
@@ -122,7 +126,6 @@ void max7219_brightness( uint8_t brightness )
 
   for (uint8_t i = 0; i < DISPLAY_SIZE; i++)
   {
-
     *ptr_max7219_ram++ = REG_INTENSITY;
     *ptr_max7219_ram++ = brightness;
   } 

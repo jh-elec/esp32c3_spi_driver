@@ -153,11 +153,28 @@ void gpio_pin_map_to_peripheral( const gpio_t _pin, uint8_t _periphSignal, const
 */
 void gpio_set_io_mux(const gpio_t _pin, const uint8_t _func, const GPIO_IO_t _io);
 
+/* configure gpio output via special gpio enable register
+*	_pin: gpiox
+*/
+void gpio_config_output( const gpio_t _pin );
+
+/* set gpiox to high level
+*	_pin: gpiox
+*/
+void gpio_set_high( const gpio_t _pin  );
+
+/* set gpiox to low level
+*	_pin: gpiox
+*/
+void gpio_set_low( const gpio_t _pin );
+
 /* configure io mux 
 *	_pin: gpiox
 *	_level: 0 = output "low", 1 = output "high"
+*	_inv: 0 = not inverted, 1 = inverted
 */
-void gpio_set_bit( const gpio_t _pin, const uint8_t _level, uint8_t _inv );
+void gpio_set_extendet( const gpio_t _pin, const uint8_t _level, const GPIO_INV_SIGNAL_t _inv );
+
 
 void gpio_enable_output( const gpio_t _pin );
 

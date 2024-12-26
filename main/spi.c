@@ -38,6 +38,27 @@ static inline uint32_t swap_dword(uint32_t _data )
 }
 
 
+#define ClkRegToFreq(reg) (apb_freq / (((reg)->clkdiv_pre + 1) * ((reg)->clkcnt_n + 1)))
+
+
+  #define SYSTEM_SYSCLK_CONF_REG    SYSREG_REG(0x58)
+  #define SYSTEM_SOC_CLK_SEL_bp     10
+  #define SYSTEM_SOC_CLK_SEL_bm     BIT(SYSTEM_SOC_CLK_SEL_bp)
+  #define SYSTEM_CLK_XTAL_FREQ_bp   12
+  #define SYSTEM_CLK_XTAL_FREQ_bm   0x7F000
+
+uint32_t spi_get_soc_clk() 
+{
+  //uint32_t apb_freq = getApbFrequency();
+  //spiClk_t reg = {clockDiv};
+  //return ClkRegToFreq(&reg);
+  return (REG_READ( SYSTEM_SYSCLK_CONF_REG ) &  SYSTEM_SOC_CLK_SEL_bm) >> SYSTEM_SOC_CLK_SEL_bp;
+}
+
+uint32_t spi_get_xtal_clk_freq()
+{
+  return ( ( REG_READ( SYSTEM_SYSCLK_CONF_REG ) & SYSTEM_CLK_XTAL_FREQ_bm ) >> SYSTEM_CLK_XTAL_FREQ_bp );
+}
 
 void spi_init_bus() 
 {
@@ -51,8 +72,6 @@ void spi_init_bus()
   REG_SET_BIT( SPI_DMA_CONF_REG, SPI_RX_AFIFO_RST_bm );
   REG_SET_BIT( SPI_DMA_CONF_REG, SPI_BUF_AFIFO_RST_bm );
   REG_WRITE( SPI_CLOCK_REG, 0 );
-
-  //REG_SET_BIT( SPI_USER_REG,  SPI_USR_CONF_NXT_bm );
 }
 
 void spi_start_bus( uint32_t _clockDiv, const dataMode_t _dataMode, const bitOrder_t _bitOrder )
@@ -94,7 +113,7 @@ uint8_t spi_write_buffer( uint32_t *_data, uint8_t _length )
   return 0; // all_ok
 }
 
-uint8_t spi_get_buffer( uint8_t _index )
+uint32_t spi_get_buffer( uint8_t _index )
 {
   return REG_READ( SPI_Wn_REG(_index) );
 }
@@ -167,6 +186,7 @@ void spi_set_clock_div( uint32_t _clockDiv )
   REG_WRITE( SPI_CLOCK_REG, _clockDiv );
 }
 
+
 void spi_write_byte( uint8_t _data )  
 {
   REG_WRITE( SPI_MS_DLEN_REG, 7 );
@@ -207,11 +227,9 @@ void spi_write_bytes( uint8_t *_data, uint8_t _length )
 
   REG_SET_BIT( SPI_CMD_REG, SPI_USR_bm );
   while ( REG_READ( SPI_CMD_REG ) & SPI_USR_bm );  
-
-  spi_poll_trans_done_int();
 }
 
-uint8_t spi_transfer_byte( uint8_t _data, uint8_t _length )
+uint8_t spi_transfer_byte( uint8_t _data )
 {
   REG_WRITE( SPI_MS_DLEN_REG, 7 );
   REG_WRITE( SPI_Wn_REG(0), _data );
@@ -245,6 +263,8 @@ void spi_transfer_bytes( uint8_t *_data, uint8_t *_out, uint8_t _length )
   }
 }
 
+
+
 void spi_write_word( uint16_t _data )
 {
   REG_WRITE( SPI_MS_DLEN_REG, 15 );
@@ -256,7 +276,20 @@ void spi_write_word( uint16_t _data )
   while ( REG_READ( SPI_CMD_REG ) & SPI_USR_bm );   
 }
 
-void spi_write_words( uint16_t * _data, uint8_t _length )
+uint16_t spi_transfer_word( uint16_t _data )
+{
+  REG_WRITE( SPI_MS_DLEN_REG, 15 );
+  REG_WRITE( SPI_Wn_REG(0), swap_word( _data ) );
+
+  REG_SET_BIT( SPI_CMD_REG, SPI_UPDATE_bm );
+
+  REG_SET_BIT( SPI_CMD_REG, SPI_USR_bm );
+  while ( REG_READ( SPI_CMD_REG ) & SPI_USR_bm );  
+
+  return spi_get_buffer(0);  
+}
+
+void spi_write_words( uint16_t *_data, uint8_t _length )
 {
   if( _length > 16 ) _length = 16;  
 
@@ -273,25 +306,74 @@ void spi_write_words( uint16_t * _data, uint8_t _length )
   while ( REG_READ( SPI_CMD_REG ) & SPI_USR_bm ){};     
 }
 
+void spi_transfer_words( uint16_t *_data, uint16_t *_out, uint8_t _length )
+{
+  REG_WRITE( SPI_MS_DLEN_REG, ( 16 * _length ) - 1 );
+  
+  spi_write_buffer( *_data, swap_word( _data ) );
+
+  REG_SET_BIT( SPI_CMD_REG, SPI_UPDATE_bm );
+
+  REG_SET_BIT( SPI_CMD_REG, SPI_USR_bm );
+  while ( REG_READ( SPI_CMD_REG ) & SPI_USR_bm );  
+
+  for ( size_t i = 0; i < _length; i++ )
+  {
+    *_out++ = spi_get_buffer(i);   
+  }
+  
+}
+
+
+
 void spi_write_dword( uint32_t _data )
 {
-  REG_WRITE( SPI_MS_DLEN_REG, 32 -1 );
-  REG_WRITE( SPI_Wn_REG(0), _data );
+  REG_WRITE( SPI_MS_DLEN_REG, 31 );
+  REG_WRITE( SPI_Wn_REG(0), swap_dword( _data ) );
 
   REG_SET_BIT( SPI_CMD_REG, SPI_UPDATE_bm );
 
   REG_SET_BIT( SPI_CMD_REG, SPI_USR_bm );
   while ( REG_READ( SPI_CMD_REG ) & SPI_USR_bm ){};    
-
-  spi_poll_trans_done_int();
 }
 
-void spi_poll_trans_done_int()
+uint32_t spi_transfer_dword( uint32_t _data, uint8_t _length )
 {
-  while( ! ( REG_READ( SPI_DMA_INT_RAW_REG )  & SPI_TRANS_DONE_INT_RAW_bm ));
+  REG_WRITE( SPI_MS_DLEN_REG, 15 );
+  REG_WRITE( SPI_Wn_REG(0), swap_word( _data ) );
+
+  REG_SET_BIT( SPI_CMD_REG, SPI_UPDATE_bm );
+
+  REG_SET_BIT( SPI_CMD_REG, SPI_USR_bm );
+  while ( REG_READ( SPI_CMD_REG ) & SPI_USR_bm );  
+
+  return spi_get_buffer(0);  
 }
 
-void spi_trans_done_clear_int()
+void spi_write_dwords( uint32_t *_data, uint8_t _length )
 {
-  REG_SET_BIT( SPI_DMA_INT_CLR_REG, SPI_TRANS_DONE_INT_CLR_bm );
+  REG_WRITE( SPI_MS_DLEN_REG, ( 16 * _length ) - 1 );
+  spi_write_buffer( _data, _length );
+
+  REG_SET_BIT( SPI_CMD_REG, SPI_UPDATE_bm );
+
+  REG_SET_BIT( SPI_CMD_REG, SPI_USR_bm );
+  while ( REG_READ( SPI_CMD_REG ) & SPI_USR_bm );  
+}
+
+void spi_transfer_dwords( uint32_t *_data, uint32_t *_out, uint8_t _length )
+{
+  REG_WRITE( SPI_MS_DLEN_REG, ( 16 * _length ) - 1 );
+  spi_write_buffer( _data, _length );
+
+  REG_SET_BIT( SPI_CMD_REG, SPI_UPDATE_bm );
+
+  REG_SET_BIT( SPI_CMD_REG, SPI_USR_bm );
+  while ( REG_READ( SPI_CMD_REG ) & SPI_USR_bm );  
+
+  for (size_t i = 0; i < _length ; i++)
+  {
+    *_out++ = spi_get_buffer(i);
+  }
+  
 }

@@ -27,6 +27,20 @@
 
 /*!<-- Defines <--*/
 /*****************************************************************/
+
+//#define SPI_USE_SW_CS0
+#define SPI_USE_HW_CS0
+
+#ifdef SPI_USE_SW_CS0
+	#warning Software "SlaveSelect" is enabled for SPI
+#endif
+
+#ifdef SPI_USE_HW_CS0
+	#warning Hardware "SlaveSelect" is enabled for SPI
+#endif 
+
+
+
 #define SPI2_BASE                           0x60024000
 #define SPI2_REG(r)                         (SPI2_BASE + r)
 
@@ -133,7 +147,6 @@
 /* versions register */
 #define SPI_DATE_REG                        SPI2_REG(0xF0)
 
-
 #define SYSREG_BASE                         0x600C0000 
 #define SYSREG_REG(r)                       (SYSREG_BASE + r)
 
@@ -177,43 +190,133 @@ typedef enum bitOrder_e
 /*!<-- Funktions Prototypen <--*/
 /*****************************************************************/
 
+/* get xtal frequency in mhz */
+uint32_t spi_get_xtal_clk_freq();
+
+/* initialize the spi bus  */
 void spi_init_bus();
 
+/* spi start bus
+*	_clockDiv: config the prescaler for frequency
+*	_dataMode: spi data mode (0..3)
+*	_bitOrder: msb or lsb first
+*/
 void spi_start_bus( uint32_t _clockDiv, const dataMode_t _dataMode, const bitOrder_t _bitOrder );
 
+/* enable system clock for the bus */
 void spi2_enable();
 
+/* write data to spi transfer buffer
+*	_*data: pointer to data for the 0..15 transfer buffer
+*	_length: data length to write in buffer
+*/
 uint8_t spi_write_buffer( uint32_t *_data, uint8_t _length );
 
-uint8_t spi_get_buffer( uint8_t _index );
+/* spi get receive buffer 
+*	_index: buffer to be read (0..15)
+*/
+uint32_t spi_get_buffer( uint8_t _index );
 
+/* reset the spi transfer buffers (0..15) */
 void spi_reset_buffer();
 
+/* disable clock and enable reset for spi */
 void spi2_disable();
 
+/* spi start bus
+*	_dataMode: config data mode 
+*/
 uint8_t spi_set_data_mode( const dataMode_t _dataMode );
 
+/* set most significant bit or least significant bit
+*	_bitOrder: most significant bit or least significant bit
+*/
 uint8_t spi_set_bit_order( const bitOrder_t _bitOrder );
 
+/* set clock divisor
+*	_clockDiv: clock divisor 
+*/
 void spi_set_clock_div( uint32_t _clockDiv );
 
+/* spi write byte 
+*	_data: data to be transmit
+*/
 void spi_write_byte( uint8_t _data );
 
+/* spi write bytes
+*	_*data: pointer to data
+*	_length: length of data
+*/
 void spi_write_bytes( uint8_t *_data, uint8_t _length );
 
-uint8_t spi_transfer_byte( uint8_t _data, uint8_t _length );
+/* spi write bytes and receive one byte
+*	_data: data transmit
+*	_length: length of data
+*/
+uint8_t spi_transfer_byte( uint8_t _data );
 
+/* spi transfer bytes
+*	_data*: pointer of data
+*	_out*: buffer for received data
+*	_length: data for transmit / receive
+*/
 void spi_transfer_bytes( uint8_t *_data, uint8_t *_out, uint8_t _length );
 
+/* spi write word
+*	_data: data transmit
+*/
 void spi_write_word( uint16_t _data );
 
+/* spi transfer word
+*	_data: data transmit
+*	return: received data
+*/
+uint16_t spi_transfer_word( uint16_t _data );
+
+/* spi transfer words
+*	_data: data transmit
+*	_length: length of data to be write
+*/
+void spi_write_words( uint16_t *_data, uint8_t _length );
+
+/* spi transfer words
+*	_*data: pointer to data for transmit
+*	_*out: pointer to be store received data
+*	_length: length of transmit / received data
+*/
+void spi_transfer_words( uint16_t *_data, uint16_t *_out, uint8_t _length );
+
+/* spi write words
+*	*_data: pointer to data for transmit
+*	_length: length of data for transmit
+*/
 void spi_write_words( uint16_t * _data, uint8_t _length );
 
+/* spi write double word
+*	_data: data transmit
+*/
 void spi_write_dword( uint32_t _data );
 
-void spi_poll_trans_done_int();
+/* spi transfer double word
+*	_data: data transmit
+*	_length: length of data for transmit
+*	return: received data
+*/
+uint32_t spi_transfer_dword( uint32_t _data, uint8_t _length );
 
-void spi_trans_done_clear_int();
+/* spi transfer double word
+*	_data: data transmit
+*	_length: length of data for transmit
+*	return: received data
+*/
+void spi_write_dwords( uint32_t *_data, uint8_t _length );
+
+/* spi transfer double words
+*	*_data: pointer of data to write
+*	*_out: pointer to store received data
+*	_length: length of data for write
+*/
+void spi_transfer_dwords( uint32_t *_data, uint32_t *_out, uint8_t _length );
 
 /*****************************************************************/
 /*!<-- Funktions Prototypen // Ende <--*/

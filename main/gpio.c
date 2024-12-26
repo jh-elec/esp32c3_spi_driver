@@ -48,18 +48,34 @@ void gpio_set_io_mux(const gpio_t _pin, const uint8_t _func, const GPIO_IO_t _io
   }
 }
 
-void gpio_set_bit( const gpio_t _pin, const uint8_t _level, uint8_t _inv )
+void gpio_config_output( const gpio_t _pin )
 {
+  REG_SET_BIT( GPIO_ENABLE_W1TS_REG, 1 << _pin );
+}
+
+void gpio_set_high( const gpio_t _pin  )
+{
+  REG_SET_BIT( GPIO_OUT_W1TS_REG, 1 << _pin );
+}
+
+void gpio_set_low( const gpio_t _pin )
+{
+  REG_SET_BIT( GPIO_OUT_W1TC_REG, 1 << _pin );
+}
+
+void gpio_set_extendet( const gpio_t _pin, const uint8_t _level, const GPIO_INV_SIGNAL_t _inv )
+{
+
   REG_SET_BIT(GPIO_ENABLE_REG, 1 << _pin );
   REG_SET_BIT( GPIO_FUNCx_OUT_SEL_CNFG_REG( _pin ) , 0x80 | GPIO_FUNCx_OEN_SEL_bm );
 
   switch ( _inv )
   {
-    case 0:
+    case GPIO_INV_SIGNAL_DISABLE:
       REG_CLR_BIT( GPIO_FUNCx_OUT_SEL_CNFG_REG( _pin ),  ( _inv << GPIO_FUNCx_OUT_INV_SEL_bp ) );
     break;
 
-    case 1:
+    case GPIO_INV_SIGNAL_ENABLE:
       REG_SET_BIT( GPIO_FUNCx_OUT_SEL_CNFG_REG( _pin ),  ( _inv << GPIO_FUNCx_OUT_INV_SEL_bp ) );
     break; 
   }
@@ -76,7 +92,3 @@ void gpio_set_bit( const gpio_t _pin, const uint8_t _level, uint8_t _inv )
   }
 }
 
-void gpio_enable_output( const gpio_t _pin )
-{
-  REG_WRITE( GPIO_ENABLE_REG, 1 << _pin );
-}
