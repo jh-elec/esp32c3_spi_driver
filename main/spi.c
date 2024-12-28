@@ -21,7 +21,7 @@
 #include <stdint.h>
 #include <string.h>
 #include "spi.h"
-
+#include "sysreg.h"
 
 
 static inline uint16_t swap_word( uint16_t _data )
@@ -41,11 +41,9 @@ static inline uint32_t swap_dword(uint32_t _data )
 #define ClkRegToFreq(reg) (apb_freq / (((reg)->clkdiv_pre + 1) * ((reg)->clkcnt_n + 1)))
 
 
-  #define SYSTEM_SYSCLK_CONF_REG    SYSREG_REG(0x58)
-  #define SYSTEM_SOC_CLK_SEL_bp     10
-  #define SYSTEM_SOC_CLK_SEL_bm     BIT(SYSTEM_SOC_CLK_SEL_bp)
-  #define SYSTEM_CLK_XTAL_FREQ_bp   12
-  #define SYSTEM_CLK_XTAL_FREQ_bm   0x7F000
+
+
+
 
 uint32_t spi_get_soc_clk() 
 {
@@ -53,6 +51,11 @@ uint32_t spi_get_soc_clk()
   //spiClk_t reg = {clockDiv};
   //return ClkRegToFreq(&reg);
   return (REG_READ( SYSTEM_SYSCLK_CONF_REG ) &  SYSTEM_SOC_CLK_SEL_bm) >> SYSTEM_SOC_CLK_SEL_bp;
+}
+
+uint8_t spi_get_soc_clk_sel()
+{
+  return ( ( REG_READ( SYSTEM_SYSCLK_CONF_REG ) & SYSTEM_SOC_CLK_SEL_bm ) >> SYSTEM_SOC_CLK_SEL_bp );
 }
 
 uint32_t spi_get_xtal_clk_freq()

@@ -147,16 +147,6 @@
 /* versions register */
 #define SPI_DATE_REG                        SPI2_REG(0xF0)
 
-#define SYSREG_BASE                         0x600C0000 
-#define SYSREG_REG(r)                       (SYSREG_BASE + r)
-
-#define SYSTEM_PERIP_CLK_EN0_REG            SYSREG_REG(0x10)
-#define SYSTEM_SPI2_CLK_EN_bp				6
-#define SYSTEM_SPI2_CLK_EN_bm				BIT(SYSTEM_SPI2_CLK_EN_bp)
-
-#define SYSTEM_PERIP_RST_EN0_REG            SYSREG_REG(0x18)
-#define SYSTEM_SPI2_RST_bp					6
-#define SYSTEM_SPI2_RST_bm					BIT(SYSTEM_SPI2_RST_bp)
 /*****************************************************************/
 /*!<-- Defines // Ende <--*/
 
